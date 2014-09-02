@@ -1,5 +1,5 @@
 from django.conf.urls import patterns, url
-from ref_ts_app import views
+from ref_ts import views
 
 urlpatterns = patterns('',
     url(r'^_internal/create-ref-time-series/$', views.create_ref_time_series),

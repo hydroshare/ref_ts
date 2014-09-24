@@ -17,7 +17,7 @@ import os
 from lxml import etree
 from StringIO import StringIO
 import datetime
-
+from django.utils.timezone import now
 
 class ReferencedSitesForm(forms.Form):
     wsdl_url = forms.URLField()
@@ -154,7 +154,7 @@ def create_ref_time_series(request, *args, **kwargs):
             variable_name=variable_name,
             variable_code=variable_code,
             start_date=start_date,
-            end_date=datetime.datetime.now()
+            end_date=now()
         )
         return HttpResponseRedirect(res.get_absolute_url())
 

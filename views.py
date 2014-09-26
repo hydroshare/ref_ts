@@ -320,7 +320,7 @@ def transform_file(request, shortkey, *args, **kwargs):
     s = StringIO(wml_string)
     dom = etree.parse(s)
     module_dir = os.path.dirname(__file__)
-    xsl_location = os.path.join(module_dir, "static/ref_ts_app/xslt/WaterML1_1_timeSeries_to_WaterML2.xsl")
+    xsl_location = os.path.join(module_dir, "static/ref_ts/xslt/WaterML1_1_timeSeries_to_WaterML2.xsl")
     xslt = etree.parse(xsl_location)
     transform = etree.XSLT(xslt)
     newdom = transform(dom)

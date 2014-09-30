@@ -7,6 +7,7 @@ from django.http import HttpResponseRedirect
 from mezzanine.pages.page_processors import processor_for
 from ga_resources.utils import json_or_jsonp
 from hs_core import hydroshare
+from hs_core.hydroshare.hs_bagit import create_bag
 from hs_core.models import ResourceFile
 from . import ts_utils
 from .models import RefTimeSeries
@@ -237,7 +238,8 @@ def generate_files(request, shortkey, *args, **kwargs):
         csv_file = open(csv_name, 'r')
         xml_file = open(xml_name, 'r')
         files = [csv_file, xml_file]
-        hydroshare.add_resource_files(res.short_id, *files)
+        hydroshare.add_resource_files(res.short_id, csv_file, xml_file)
+        create_bag(res)
         os.remove(csv_name)
         os.remove(xml_name)
         files = ResourceFile.objects.filter(object_id=res.pk)

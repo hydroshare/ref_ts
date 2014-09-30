@@ -8,9 +8,34 @@
 {% keywords_for page as kws %}
 {% set_page_permissions page %}
 
+<style>
+.axis path, .axis line
+        {
+            fill: none;
+            stroke: #777;
+            shape-rendering: crispEdges;
+        }
+
+        .axis text
+        {
+            font-family: 'Arial';
+            font-size: 13px;
+        }
+        .tick
+        {
+            stroke-dasharray: 1, 2;
+        }
+        .bar
+        {
+            fill: FireBrick;
+        }
+
+</style>
 <div id="graph-header-var"></div>
 <div id="graph-header-site"></div>
-<div id="graph"></div>
+<div id="graph-container" style = "width: 1000px, height= 450px">
+
+</div>
 
 <div class="row">
         <div class="col-md-12">
@@ -407,6 +432,7 @@
     <script src=" {% static "ref_ts/rickshaw/vendor/d3.min.js" %}"></script>
     <script src=" {% static "ref_ts/rickshaw/vendor/d3.layout.min.js" %}"></script>
     <script src=" {% static "ref_ts/rickshaw/rickshaw.min.js" %}"></script>
+    <script src=" {% static "ref_ts/d3/d3.min.js" %}"></script>
     <script type="text/javascript">
     $(function() {
 
@@ -435,24 +461,133 @@
         }
 
         function graphVals(graph_data, units) {
-            var graph = new Rickshaw.Graph( {
-                element: document.querySelector("#graph"),
-                height: 250,
-                renderer: 'line',
-                series: [{
-                    color: 'steelblue',
-                    data: graph_data,
-                    name: units,
-                    padding: {top: 0.02, left: 0.02, right: 0.02, bottom: 0.1}
-                }]
-            });
 
-            var x_axis = new Rickshaw.Graph.Axis.Time( { graph: graph } );
-            var y_axis = new Rickshaw.Graph.Axis.Y( { graph: graph } );
-            graph.render();
-            var hoverDetail = new Rickshaw.Graph.HoverDetail( {graph: graph} );
+            for (i=0; i<graph_data.length; i++){
+                graph_data[i].x = graph_data[i].x*1000;
+            }
+            var minDate = new Date(graph_data[0].x);
+            var maxDate = new Date(graph_data[graph_data.length - 1].x);
+
+            var WIDTH = 1140,
+                HEIGHT = 300,
+                HEIGHT2 = 50,
+                MARGINS = {
+                  top: 20,
+                  right: 40,
+                  bottom: 20,
+                  left: 20
+                },
+                xRange = d3.time.scale().range([MARGINS.left, WIDTH]).domain([minDate, maxDate ]),
+                xRange2 = d3.time.scale().range([MARGINS.left, WIDTH]).domain([minDate, maxDate ]),
+                yRange = d3.scale.linear().range([HEIGHT - MARGINS.top, MARGINS.bottom]).domain([d3.min(graph_data, function(d) {
+                  return d.y;
+                }), d3.max(graph_data, function(d) {
+                  return d.y;
+                })]),
+                yRange2 = d3.scale.linear().range([HEIGHT2 - MARGINS.top, MARGINS.bottom]).domain([d3.min(graph_data, function(d) {
+                  return d.y;
+                }), d3.max(graph_data, function(d) {
+                  return d.y;
+                })]),
+                xAxis = d3.svg.axis()
+                  .scale(xRange)
+                  .tickSize(5)
+                  .tickFormat(d3.time.format('%y'))
+                  .tickSubdivide(true),
+                yAxis = d3.svg.axis()
+                  .scale(yRange)
+                  .tickSize(5)
+                  .orient('left')
+                  .tickSubdivide(true),
+                yAxis2 = d3.svg.axis()
+                  .scale(yRange2)
+                  .tickSize(5)
+                  .orient('left')
+                  .tickSubdivide(true);
+
+            var svg = d3.select("#graph-container").append("svg")
+                .attr("width", $("#graph-container").width())
+                .attr("height", 350 + MARGINS.top + MARGINS.bottom);
+
+            var brush = d3.svg.brush()
+                .x(xRange2)
+                .on("brush", brushed);
+
+            var focus = svg.append("g")
+                .attr("class", "focus")
+                .attr("width", $("#graph-container").width())
+                .attr("height", '300');
+             
+            focus.append('g')
+              .attr('class', 'x axis')
+              .attr('transform', 'translate(0,' + (HEIGHT - MARGINS.bottom) + ')')
+              .call(xAxis);
+             
+            focus.append('g')
+              .attr('class', 'y axis')
+              .attr('transform', 'translate(' + (MARGINS.left) + ',0)')
+              .call(yAxis);
+
+
+
+            var lineFunc = d3.svg.line()
+              .x(function(d) {
+                return xRange(d.x);
+              })
+              .y(function(d) {
+                return yRange(d.y);
+              })
+              .interpolate('linear');
+
+            var lineFunc1 = d3.svg.line()
+              .x(function(d) {
+                return xRange(d.x);
+              })
+              .y(function(d) {
+                return yRange2(d.y);
+              })
+              .interpolate('linear');
+
+            focus.append('path')
+              .attr('d', lineFunc(graph_data))
+              .attr('stroke', 'rgb(31,119,180)')
+              .attr('class','area')
+              .attr('stroke-width', 1.5)
+              .attr('fill', 'none');
+
+            var context = svg.append("g")
+                .attr("class", "context")
+                .attr("transform", "translate(0,300)");
+
+
+            context.append('g')
+              .attr('class', 'x axis')
+              .attr('transform', 'translate(0,' + (HEIGHT2 - MARGINS.bottom) + ')')
+              .call(xAxis);
+
+
+            context.append('path')
+              .attr('d', lineFunc1(graph_data))
+              .attr('stroke', 'rgb(31,119,180)')
+              .attr('stroke-width', 1.5)
+               .attr('class','area')
+              .attr('fill', 'none');
+
+            context.append("g")
+              .attr("class", "x brush")
+              .call(brush)
+            .selectAll("rect")
+              .attr("y", -6)
+              .attr("height", HEIGHT2);
+        function brushed() {
+          xRange.domain(brush.empty() ? xRange2.domain() : brush.extent());
+          focus.select(".area").attr("d", lineFunc(graph_data));
+          focus.select(".x.axis").call(xAxis);
+}
 
         }
+
+
         function transformFile() {
             $.ajax({
                 type:"GET",

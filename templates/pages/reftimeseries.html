@@ -30,16 +30,85 @@
             fill: FireBrick;
         }
 
-</style>
-<div id="graph-header-var"></div>
-<div id="graph-header-site"></div>
-<div id="graph-container" style = "width: 1000px, height= 450px">
+        .brush .extent {
+            stroke: #fff;
+            fill-opacity: .125;
+            shape-rendering: crispEdges;
+        }
+        #graph-area{
+            width: 100%;
+            height: 510px;
+        }
 
-</div>
+        #graph-container{
+            height:100%;
+            width: -moz-calc(100% - 307px);
+            width: -webkit-calc(100% - 307px);
+            width: calc(100% - 307px);
+            float:left;
+            padding-top: 5px;
+            overflow-y: auto;
+        }
+
+        #panel-right{
+            overflow-y: scroll;
+            background: white;
+            overflow-x: hidden;
+            position: absolute;
+            right: 0px;
+            width: 307px;
+            height: 500px;
+            float: right;
+            border-left: 1px solid #aaa;
+        }
+
+</style>
 
 <div class="row">
         <div class="col-md-12">
             {% block extra_content %}
+                <div id="graph-header-var"></div>
+                <div id="graph-header-site"></div>
+                <div id="graph-area">
+                    <div id="graph-container"></div>
+                    <div id="panel-right">
+                        <div id="plot-options">
+                            <table class="table">
+                                        <div id="dateIntervals" class="btn-group">
+                                              <button id="btnAll" type="button" class="btn btn-default">All</button>
+                                              <button id="btnLastMonth" type="button" class="btn btn-default">Last Month</button>
+                                              <button id="btnLastWeek" type="button" class="btn btn-default">Last Week</button>
+                                        </div>
+
+                                        <tbody>
+                                            <tr><td>Begin Date</td><td><input id="dpd1" type="text" class="datepicker" data-date-format="m/dd/yyyy"></td></tr>
+                                            <tr><td>End Date</td><td><input id="dpd2" type="text" class="datepicker" data-date-format="m/dd/yyyy"></td></tr>
+                                            <tr><td>Visualization</td><td>
+                                              <div class="btn-group">
+                                                  <button id="visualizationDropDown" class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
+                                                    Time Series <span class="caret"></span>
+                                                  </button>
+                                                  <ul class="dropdown-menu">
+                                                      <li><a href="#" id="btnTimeSeries">Time Series</a></li>
+                                                      <li><a href="#" id="btnHistogram">Histogram</a></li>
+                                                      <li><a href="#" id="btnBoxAndWhisker">Box and Whisker</a></li>
+                                                  </ul>
+                                              </div>
+                                            </td></tr>
+                                        <tr><td></td><td><button id ="btnSetPlotOptions" type="button" class="btn btn-primary"> Plot</button></td></tr>
+                                        </tbody>
+                                   </table>
+                                </div>
+                        <div id="summaryContainer" class="panel panel-default">
+                           <div class="panel-heading  glyphicon glyphicon-list-alt"><span class="container-title"> Summary Statistics</span></div>
+                           <table class="table" id="statisticsTable">
+                                <tbody>
+
+                                </tbody>
+                           </table>
+                        </div>
+                    </div>
+                </div>
             {% endblock %}
             <div id="loading"><h2>UPDATING DATA . . .</h2><br></div>
             <table class="table table-striped" id="downloads">
@@ -462,14 +531,14 @@
 
         function graphVals(graph_data, units) {
 
-            for (i=0; i<graph_data.length; i++){
+            for (var i=0; i<graph_data.length; i++){
                 graph_data[i].x = graph_data[i].x*1000;
             }
             var minDate = new Date(graph_data[0].x);
             var maxDate = new Date(graph_data[graph_data.length - 1].x);
 
-            var WIDTH = 1140,
-                HEIGHT = 300,
+            var WIDTH = 800,
+                HEIGHT = 432,
                 HEIGHT2 = 50,
                 MARGINS = {
                   top: 20,
@@ -477,8 +546,8 @@
                   bottom: 20,
                   left: 20
                 },
-                xRange = d3.time.scale().range([MARGINS.left, WIDTH]).domain([minDate, maxDate ]),
-                xRange2 = d3.time.scale().range([MARGINS.left, WIDTH]).domain([minDate, maxDate ]),
+                xRange = d3.time.scale().range([20, WIDTH-MARGINS.left-MARGINS.right]).domain([minDate, maxDate ]),
+                xRange2 = d3.time.scale().range([20, WIDTH-MARGINS.left-MARGINS.right]).domain([minDate, maxDate ]),
                 yRange = d3.scale.linear().range([HEIGHT - MARGINS.top, MARGINS.bottom]).domain([d3.min(graph_data, function(d) {
                   return d.y;
                 }), d3.max(graph_data, function(d) {
@@ -490,7 +559,7 @@
                   return d.y;
                 })]),
                 xAxis = d3.svg.axis()
-                  .scale(xRange)
+                  .scale(xRange2)
                   .tickSize(5)
                   .tickFormat(d3.time.format('%y'))
                   .tickSubdivide(true),
@@ -498,16 +567,11 @@
                   .scale(yRange)
                   .tickSize(5)
                   .orient('left')
-                  .tickSubdivide(true),
-                yAxis2 = d3.svg.axis()
-                  .scale(yRange2)
-                  .tickSize(5)
-                  .orient('left')
                   .tickSubdivide(true);
 
             var svg = d3.select("#graph-container").append("svg")
-                .attr("width", $("#graph-container").width())
-                .attr("height", 350 + MARGINS.top + MARGINS.bottom);
+                .attr("width", 833)
+                .attr("height", 500);
 
             var brush = d3.svg.brush()
                 .x(xRange2)
@@ -557,7 +621,7 @@
 
             var context = svg.append("g")
                 .attr("class", "context")
-                .attr("transform", "translate(0,300)");
+                .attr("transform", "translate(0," + HEIGHT + ")");
 
 
             context.append('g')
@@ -577,16 +641,129 @@
               .attr("class", "x brush")
               .call(brush)
             .selectAll("rect")
-              .attr("y", -6)
-              .attr("height", HEIGHT2);
+              .attr("y", 0)
+              .attr("height", 35);
         function brushed() {
           xRange.domain(brush.empty() ? xRange2.domain() : brush.extent());
           focus.select(".area").attr("d", lineFunc(graph_data));
           focus.select(".x.axis").call(xAxis);
-}
-
+            }
+        var summary = calcSummaryStats(graph_data);
+        setSummaryStatistics(summary);
         }
 
+        function calcSummaryStats(data){
+            var summary = {};
+            summary = {
+                maximum:-Infinity,
+                minimum:Infinity,
+                arithmeticMean: 0,
+                geometricSum:0,
+                geometricMean:0,
+                deviationSum:0,
+                standardDeviation:0,
+                observations:0,
+                coefficientOfVariation:0,
+                quantile10:0,
+                quantile25:0,
+                median:0,
+                quantile75:0,
+                quantile90:0
+            };
+
+            if (data.length == 0){
+                summary.maximum = "NaN";
+                summary.minimum = "NaN";
+                summary.arithmeticMean = "NaN";
+                summary.geometricSum = "NaN";
+                summary.geometricMean = "NaN";
+                summary.deviationSum = "NaN";
+                summary.standardDeviation = "NaN";
+                summary.observations = 0;
+                summary.quantile10 = "NaN";
+                summary.quantile25 = "NaN";
+                summary.median = "NaN";
+                summary.quantile75 = "NaN";
+                summary.quantile90 = "NaN";
+            }
+           else {
+                var y_vals = [];
+                for (var j = 0; j < data.length; j++) {
+                    y_vals.push(data[j].y)
+                }
+                // Quantiles
+                summary.quantile10 = d3.quantile(y_vals, .1).toFixed(2);
+                summary.quantile25 = d3.quantile(y_vals, .25).toFixed(2);
+                summary.median = d3.quantile(y_vals, .5).toFixed(2);
+                summary.quantile75 = d3.quantile(y_vals, .75).toFixed(2);
+                summary.quantile90 = d3.quantile(y_vals, .9).toFixed(2);
+                // Number of observations
+                summary.observations = data.length;
+                // Maximum and Minimum
+                summary.maximum = d3.max(data, function (d) {
+                    return d.y;
+                });  //good
+                summary.minimum = d3.min(data, function (d) {
+                    return d.y;
+                });  //good
+
+                // Arithmetic Mean
+                summary.arithmeticMean = d3.mean(data, function (d) {
+                    return d.y;
+                }).toFixed(2);
+
+                // Standard Deviation
+                summary.deviationSum = d3.sum(data, function (d) {
+                    return Math.pow(parseFloat(d.y) - summary.arithmeticMean, 2)
+                }).toFixed(2);
+                summary.standardDeviation = (Math.pow(summary.deviationSum / data.length, (1 / 2))).toFixed(2);
+
+                // Geometric Mean
+                summary.geometricSum = d3.sum(data, function (d) {
+                    if (d.y != 0) return Math.log(Math.abs(d.y));
+                }).toFixed(2);
+                summary.geometricMean = (Math.pow(2, (summary.geometricSum / data.length))).toFixed(2);
+
+                // Coefficient of Variation
+                var variation = summary.standardDeviation / summary.arithmeticMean;
+                if (variation == Infinity || variation == -Infinity) {
+                    variation = null;
+                }
+                summary.coefficientOfVariation = ((summary.standardDeviation / summary.arithmeticMean) * 100).toFixed(2) + "%";
+
+                // Add commas
+                summary.arithmeticMean = numberWithCommas(summary.arithmeticMean);
+                summary.geometricMean = numberWithCommas(summary.geometricMean);
+                summary.observations = numberWithCommas(summary.observations);
+                summary.quantile10 = numberWithCommas(summary.quantile10);
+                summary.quantile25 = numberWithCommas(summary.quantile25);
+                summary.median = numberWithCommas(summary.median);
+                summary.quantile75 = numberWithCommas(summary.quantile75);
+                summary.quantile90 = numberWithCommas(summary.quantile90);
+                return summary;
+            }
+    }
+
+        function numberWithCommas(x) {
+        return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+
+        function setSummaryStatistics(summary){
+        $("#statisticsTable tbody").empty();
+        $("#statisticsTable tbody").append(
+            '<tr><td>Arithmetic Mean</td><td>' + summary.arithmeticMean + '</td></tr>\
+                    <tr><td>Geometric Mean</td><td>'+ summary.geometricMean + '</td></tr>\
+                    <tr><td>Maximum</td><td>' + summary.maximum + '</td></tr>\
+                    <tr><td>Minimum</td><td>' + summary.minimum + '</td></tr>\
+                    <tr><td>Standard Deviation</td><td>' + summary.standardDeviation + '</td></tr>\
+                    <tr><td>10%</td><td>'+ summary.quantile10 +'</td></tr>\
+                    <tr><td>25%</td><td>'+ summary.quantile25 +'</td></tr>\
+                    <tr><td>Median, 50%</td><td>'+ summary.median +'</td></tr>\
+                    <tr><td>75%</td><td>'+ summary.quantile75 +'</td></tr>\
+                    <tr><td>90%</td><td>'+ summary.quantile90 +'</td></tr>\
+                    <tr><td>Number of Observations</td><td>'+ summary.observations +'</td></tr>'
+        );
+    }
 
         function transformFile() {
             $.ajax({
@@ -608,6 +785,7 @@
                 success: function(data, xhr, status){
                     var units = data['units'],
                             d = data['for_graph'],
+                         vals = data['values'],
                   status_code = data['status_code'],
                      csv_name = data.csv_name || "",
                      csv_link = data.csv_link || "",
@@ -625,7 +803,7 @@
                         $('#downloads').show();
                         if (units==undefined){units='Data'}
                         d.sort(compare);
-                        graphVals(d, units);
+                        graphVals(d, vals, units);
                         if (data['variable_name']){
                             var var_text = '<h2>' + data['variable_name'] + '</h2>';
                             $('#graph-header-var').html(var_text);}
@@ -647,6 +825,108 @@
                     console.log(stuff);
                 }
             });
+        }
+
+        function getDatasetsAfterFilters(){
+            var minDate = new Date(8640000000000000);
+            var maxDate = new Date(-8640000000000000);
+            var dataset = _(self.plottedSeries).pluck('dataset');
+            var noDataValues = _(datasets).pluck('noDataValue');
+            var parseDate = d3.time.format("%Y-%m-%dT%I:%M:%S").parse;
+
+            for (var i = 0; i < datasets.length; i++) {
+                // Filter no-data value
+                datasets[i] = datasets[i].filter(function (d) {
+                    return (d.value != noDataValues[i]);
+                });
+                for (var j = 0; j < datasets[i].length; j++){
+                    var parsedDate = parseDate(datasets[i][j]['date']);
+                    if (minDate.valueOf() > parsedDate.valueOf()) {
+                        minDate = parsedDate;
+                    }
+                    if (maxDate.valueOf() < parsedDate.valueOf()) {
+                        maxDate = parsedDate;
+                    }
+                }
+            }
+
+            // Update minimum and maximum dates on the date pickers
+             self.dateFirst = $('#dpd1').datepicker({
+                onRender: function (date){
+                    return (date.valueOf() > maxDate.valueOf() || date.valueOf() < minDate.valueOf()) ? 'disabled' : '';    // disable dates with no records
+                }
+            }).on('click', function(){
+                self.dateLast.hide();
+            }).on('changeDate',function (ev) {
+                self.dateFirst.hide();
+                //$('#dpd2')[0].focus();
+            }).data('datepicker');
+
+            self.dateLast = $('#dpd2').datepicker({
+                onRender: function (date) {
+                    return (date.valueOf() > maxDate.valueOf() || date.valueOf() < minDate.valueOf()) ? 'disabled' : '';    // disable dates with no records
+                }
+            }).on('click', function(){
+                self.dateFirst.hide();
+            }).on('changeDate',function (ev) {
+                self.dateLast.hide();
+            }).data('datepicker');
+
+            var nowTemp = new Date();
+            var now = new Date(nowTemp.getFullYear(), nowTemp.getMonth(), nowTemp.getDate(), 0, 0, 0, 0);
+
+            // If no dates are set, display the last month. Display the whole set if it contains less than 500 data points.
+            if (self.dateFirst.date.valueOf() == now.valueOf() && self.dateLast.date.valueOf() == now.valueOf()) {
+                // Mark the button of last month interval
+                $("#dateIntervals button").removeClass("active");
+                $("#btnLastMonth").addClass("active");
+
+                self.dateFirst.date = maxDate.setMonth(maxDate.getMonth() - 1);
+                self.dateFirst.setValue(maxDate);
+
+                self.dateLast.date = maxDate.setMonth(maxDate.getMonth() + 1);
+                self.dateLast.setValue(maxDate);
+            }
+
+            // Update click events for the date interval buttons
+            $("#btnLastWeek").click(function() {
+                $("#dateIntervals button").removeClass("active");
+                $(this).addClass("active");
+
+                self.dateFirst.date = maxDate.setDate(maxDate.getDate() - 7);
+                self.dateFirst.setValue(maxDate);
+
+                self.dateLast.date = maxDate.setDate(maxDate.getDate() + 7);
+                self.dateLast.setValue(maxDate);
+            });
+            $("#btnLastMonth").click(function() {
+                $("#dateIntervals button").removeClass("active");
+                $(this).addClass("active");
+
+                self.dateFirst.date = maxDate.setMonth(maxDate.getMonth() - 1);
+                self.dateFirst.setValue(maxDate);
+
+                self.dateLast.date = maxDate.setMonth(maxDate.getMonth() + 1);
+                self.dateLast.setValue(maxDate);
+            });
+            $("#btnAll").click(function() {
+                $("#dateIntervals button").removeClass("active");
+                $(this).addClass("active");
+
+                self.dateFirst.date = minDate;
+                self.dateFirst.setValue(minDate);
+
+                self.dateLast.date = maxDate;
+                self.dateLast.setValue(maxDate);
+            });
+
+            // Filter by dates if specified
+            for (var i = 0; i < datasets.length; i++){
+                datasets[i] = datasets[i].filter(function (d) {
+                    return (parseDate(d.date).valueOf() >= self.dateFirst.date.valueOf() && parseDate(d.date).valueOf() <= self.dateLast.date.valueOf());
+                });
+            }
+            return datasets;
         }
 
         $(document).ready(function(){

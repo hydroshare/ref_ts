@@ -270,7 +270,7 @@ def time_series_from_service(service_url, soap_or_rest, **kwargs):
             raise Http404('Invalid url')  # ought to be a 400, but no page implemented for that
         try:
             location = ':' + kwargs['site_name_or_code'] # maybe the user provided a site code
-            response = client.service.GetValues(location, var, s_d, e_d, a_t)
+            raise Exception(location, var, s_d, e_d, a_t)
         except MethodNotFound:
             raise Http404("Method 'GetValues' not found")
         except WebFault:

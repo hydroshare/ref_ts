@@ -63,10 +63,11 @@
         }
 
 </style>
-
+<link id="bsdp-css" href="{% static "ref_ts/datepicker/css/datepicker.css" %}" rel="stylesheet">
 <div class="row">
         <div class="col-md-12">
             {% block extra_content %}
+                <div id="loading"><h2>UPDATING DATA . . .</h2><br></div>
                 <div id="graph-header-var"></div>
                 <div id="graph-header-site"></div>
                 <div id="graph-area">
@@ -110,7 +111,7 @@
                     </div>
                 </div>
             {% endblock %}
-            <div id="loading"><h2>UPDATING DATA . . .</h2><br></div>
+
             <table class="table table-striped" id="downloads">
                 <tr>
                     <td id="csv-name"></td>
@@ -148,9 +149,6 @@
     <a class="btn btn-primary" id="share" href="#sharing">Share</a>
     <a class="btn btn-primary" href="/admin/pages/page/{{ page.pk }}" id="edit">Edit</a>
     {% endif %}
-
-    <a class="btn btn-primary" href="/admin/pages/page/{{ page.pk }}" id="snapshot" data-toggle="tooltip" data-placement="top"
-       title="This takes the most up to date data and creates a non referenced time series.">Take a Snapshot</a>
 
     {% if page.perms.delete %}
     <a class="btn btn-primary" href="/admin/pages/page/{{ page.pk }}" id="switch-to-static" data-toggle="tooltip" data-placement="top"
@@ -496,13 +494,10 @@
     </div>
 
 
-
-    <link rel="stylesheet" href="../../static/ref_ts/rickshaw/rickshaw.min.css">
-    <script src=" {% static "ref_ts/rickshaw/vendor/d3.min.js" %}"></script>
-    <script src=" {% static "ref_ts/rickshaw/vendor/d3.layout.min.js" %}"></script>
-    <script src=" {% static "ref_ts/rickshaw/rickshaw.min.js" %}"></script>
     <script src=" {% static "ref_ts/d3/d3.min.js" %}"></script>
+    <script src=" {% static "ref_ts/datepicker/js/bootstrap-datepicker.js" %}"></script>
     <script type="text/javascript">
+
     $(function() {
 
         function compare(a,b) {
@@ -512,6 +507,7 @@
                 return 1;
             return 0;
         }
+
 
         function humanFileSize(bytes) {
             var thresh = 1024;
@@ -531,9 +527,7 @@
 
         function graphVals(graph_data, units) {
 
-            for (var i=0; i<graph_data.length; i++){
-                graph_data[i].x = graph_data[i].x*1000;
-            }
+
             var minDate = new Date(graph_data[0].x);
             var maxDate = new Date(graph_data[graph_data.length - 1].x);
 
@@ -559,7 +553,7 @@
                   return d.y;
                 })]),
                 xAxis = d3.svg.axis()
-                  .scale(xRange2)
+                  .scale(xRange)
                   .tickSize(5)
                   .tickFormat(d3.time.format('%y'))
                   .tickSubdivide(true),
@@ -568,6 +562,8 @@
                   .tickSize(5)
                   .orient('left')
                   .tickSubdivide(true);
+
+            $("#graph-container").html("");
 
             var svg = d3.select("#graph-container").append("svg")
                 .attr("width", 833)
@@ -650,6 +646,7 @@
             }
         var summary = calcSummaryStats(graph_data);
         setSummaryStatistics(summary);
+        getDatasetsAfterFilters(glob_graph_data);
         }
 
         function calcSummaryStats(data){
@@ -793,6 +790,7 @@
                      xml_name = data.xml_name || "",
                      xml_link = data.xml_link || "",
                      xml_size = data.xml_size || "";
+              glob_graph_data = d;
                     if (status_code==200 || status_code==503){
                         $('#csv-name').html(csv_name);
                         $('#csv-link').html('Download (' + humanFileSize(csv_size) +')');
@@ -803,6 +801,9 @@
                         $('#downloads').show();
                         if (units==undefined){units='Data'}
                         d.sort(compare);
+                        for (var i=0; i<d.length; i++){
+                                d[i].x = d[i].x*1000;
+                            }
                         graphVals(d, vals, units);
                         if (data['variable_name']){
                             var var_text = '<h2>' + data['variable_name'] + '</h2>';
@@ -814,6 +815,7 @@
                         $('#loading').html('<h2>Unable to reach service and no data exists for this resource.</h2><br>');
                     }
                     if (status_code==200){$('#loading').hide();
+                                          $('#graph-area').show();
                     } else if (status_code==503) {$('#loading').html('<h3>Unable to reach service. This is the latest data</h3><br>');}
                     if (endsWith(xml_name, 'wml_1.xml')){
                         transformFile();
@@ -827,65 +829,45 @@
             });
         }
 
-        function getDatasetsAfterFilters(){
-            var minDate = new Date(8640000000000000);
-            var maxDate = new Date(-8640000000000000);
-            var dataset = _(self.plottedSeries).pluck('dataset');
-            var noDataValues = _(datasets).pluck('noDataValue');
-            var parseDate = d3.time.format("%Y-%m-%dT%I:%M:%S").parse;
-
-            for (var i = 0; i < datasets.length; i++) {
-                // Filter no-data value
-                datasets[i] = datasets[i].filter(function (d) {
-                    return (d.value != noDataValues[i]);
-                });
-                for (var j = 0; j < datasets[i].length; j++){
-                    var parsedDate = parseDate(datasets[i][j]['date']);
-                    if (minDate.valueOf() > parsedDate.valueOf()) {
-                        minDate = parsedDate;
-                    }
-                    if (maxDate.valueOf() < parsedDate.valueOf()) {
-                        maxDate = parsedDate;
-                    }
-                }
-            }
+        function getDatasetsAfterFilters(dataset){
+            var minDate = new Date(dataset[0].x);
+            var maxDate = new Date(dataset[dataset.length - 1].x);
 
             // Update minimum and maximum dates on the date pickers
-             self.dateFirst = $('#dpd1').datepicker({
+             var dateFirst = $('#dpd1').datepicker({
                 onRender: function (date){
                     return (date.valueOf() > maxDate.valueOf() || date.valueOf() < minDate.valueOf()) ? 'disabled' : '';    // disable dates with no records
                 }
             }).on('click', function(){
-                self.dateLast.hide();
+                dateLast.hide();
             }).on('changeDate',function (ev) {
-                self.dateFirst.hide();
-                //$('#dpd2')[0].focus();
+                dateFirst.hide();
             }).data('datepicker');
 
-            self.dateLast = $('#dpd2').datepicker({
+            var dateLast = $('#dpd2').datepicker({
                 onRender: function (date) {
                     return (date.valueOf() > maxDate.valueOf() || date.valueOf() < minDate.valueOf()) ? 'disabled' : '';    // disable dates with no records
                 }
             }).on('click', function(){
-                self.dateFirst.hide();
+                dateFirst.hide();
             }).on('changeDate',function (ev) {
-                self.dateLast.hide();
+                dateLast.hide();
             }).data('datepicker');
 
             var nowTemp = new Date();
             var now = new Date(nowTemp.getFullYear(), nowTemp.getMonth(), nowTemp.getDate(), 0, 0, 0, 0);
 
             // If no dates are set, display the last month. Display the whole set if it contains less than 500 data points.
-            if (self.dateFirst.date.valueOf() == now.valueOf() && self.dateLast.date.valueOf() == now.valueOf()) {
+            if (dateFirst.date.valueOf() == now.valueOf() && dateLast.date.valueOf() == now.valueOf()) {
                 // Mark the button of last month interval
                 $("#dateIntervals button").removeClass("active");
                 $("#btnLastMonth").addClass("active");
 
-                self.dateFirst.date = maxDate.setMonth(maxDate.getMonth() - 1);
-                self.dateFirst.setValue(maxDate);
+                dateFirst.date = maxDate.setMonth(maxDate.getMonth() - 1);
+                dateFirst.setValue(maxDate);
 
-                self.dateLast.date = maxDate.setMonth(maxDate.getMonth() + 1);
-                self.dateLast.setValue(maxDate);
+                dateLast.date = maxDate.setMonth(maxDate.getMonth() + 1);
+                dateLast.setValue(maxDate);
             }
 
             // Update click events for the date interval buttons
@@ -893,49 +875,67 @@
                 $("#dateIntervals button").removeClass("active");
                 $(this).addClass("active");
 
-                self.dateFirst.date = maxDate.setDate(maxDate.getDate() - 7);
-                self.dateFirst.setValue(maxDate);
+                dateFirst.date = maxDate.setDate(maxDate.getDate() - 7);
+                dateFirst.setValue(maxDate);
 
-                self.dateLast.date = maxDate.setDate(maxDate.getDate() + 7);
-                self.dateLast.setValue(maxDate);
+                dateLast.date = maxDate.setDate(maxDate.getDate() + 7);
+                dateLast.setValue(maxDate);
             });
             $("#btnLastMonth").click(function() {
                 $("#dateIntervals button").removeClass("active");
                 $(this).addClass("active");
 
-                self.dateFirst.date = maxDate.setMonth(maxDate.getMonth() - 1);
-                self.dateFirst.setValue(maxDate);
+                dateFirst.date = maxDate.setMonth(maxDate.getMonth() - 1);
+                dateFirst.setValue(maxDate);
 
-                self.dateLast.date = maxDate.setMonth(maxDate.getMonth() + 1);
-                self.dateLast.setValue(maxDate);
+                dateLast.date = maxDate.setMonth(maxDate.getMonth() + 1);
+                dateLast.setValue(maxDate);
             });
             $("#btnAll").click(function() {
                 $("#dateIntervals button").removeClass("active");
                 $(this).addClass("active");
 
-                self.dateFirst.date = minDate;
-                self.dateFirst.setValue(minDate);
+                dateFirst.date = minDate;
+                dateFirst.setValue(minDate);
 
-                self.dateLast.date = maxDate;
-                self.dateLast.setValue(maxDate);
+                dateLast.date = maxDate;
+                dateLast.setValue(maxDate);
             });
 
-            // Filter by dates if specified
-            for (var i = 0; i < datasets.length; i++){
-                datasets[i] = datasets[i].filter(function (d) {
-                    return (parseDate(d.date).valueOf() >= self.dateFirst.date.valueOf() && parseDate(d.date).valueOf() <= self.dateLast.date.valueOf());
-                });
-            }
-            return datasets;
+
+            return dataset;
         }
 
         $(document).ready(function(){
             generateFiles();
+            $('#graph-area').hide();
         });
 
-        $('#snapshot').tooltip({animation: true, delay: { show: 500, hide: 100 }});
-
         $('#switch-to-static').tooltip({animation: true, delay: { show: 500, hide: 100 }});
+        $("#btnSetPlotOptions").click(function() {
+            var dateFirst = new Date($('#dpd1').val());
+            var dateLast = new Date($('#dpd2').val());
+
+            console.log(glob_graph_data);
+            var dataset = glob_graph_data.filter(function (d) {
+                return (d.x >= dateFirst.getTime() && d.x <= dateLast.getTime());
+            });
+            console.log(glob_graph_data);
+            var a = dateFirst.getTime();
+            var b = dateLast.getTime();
+            console.log(dataset);
+            if(a <= b) {
+               graphVals(dataset);  // Dates do not overlap, proceed
+            }
+            else{
+                $("#graph-area").prepend(
+                    '<div class="alert alert-danger alert-dismissable">\
+                      <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>\
+                      <strong></strong> Dates cannot overlap. \
+                    </div>'
+                );
+            }
+        });
 
     });
     </script>

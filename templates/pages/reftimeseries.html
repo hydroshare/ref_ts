@@ -538,10 +538,10 @@
                   top: 20,
                   right: 40,
                   bottom: 20,
-                  left: 20
+                  left: 40
                 },
-                xRange = d3.time.scale().range([20, WIDTH-MARGINS.left-MARGINS.right]).domain([minDate, maxDate ]),
-                xRange2 = d3.time.scale().range([20, WIDTH-MARGINS.left-MARGINS.right]).domain([minDate, maxDate ]),
+                xRange = d3.time.scale().range([MARGINS.left, WIDTH-MARGINS.left-MARGINS.right]).domain([minDate, maxDate ]),
+                xRange2 = d3.time.scale().range([MARGINS.left, WIDTH-MARGINS.left-MARGINS.right]).domain([minDate, maxDate ]),
                 yRange = d3.scale.linear().range([HEIGHT - MARGINS.top, MARGINS.bottom]).domain([d3.min(graph_data, function(d) {
                   return d.y;
                 }), d3.max(graph_data, function(d) {
@@ -555,7 +555,6 @@
                 xAxis = d3.svg.axis()
                   .scale(xRange)
                   .tickSize(5)
-                  .tickFormat(d3.time.format('%y'))
                   .tickSubdivide(true),
                 yAxis = d3.svg.axis()
                   .scale(yRange)
@@ -565,9 +564,17 @@
 
             $("#graph-container").html("");
 
+
             var svg = d3.select("#graph-container").append("svg")
                 .attr("width", 833)
                 .attr("height", 500);
+
+            svg.append("clipPath")
+                .attr("id", "clip")
+              .append("rect")
+                .attr("width",  WIDTH-2*MARGINS.left-MARGINS.right)
+                .attr("x",MARGINS.left)
+                .attr("height", HEIGHT);
 
             var brush = d3.svg.brush()
                 .x(xRange2)
@@ -575,18 +582,33 @@
 
             var focus = svg.append("g")
                 .attr("class", "focus")
-                .attr("width", $("#graph-container").width())
-                .attr("height", '300');
+                .attr("width", 762)
+                .attr("height", 300);
              
-            focus.append('g')
-              .attr('class', 'x axis')
-              .attr('transform', 'translate(0,' + (HEIGHT - MARGINS.bottom) + ')')
-              .call(xAxis);
+            var xaxis_el = focus.append('g')
+                .attr('class', 'x axis')
+                .attr('transform', 'translate(0,' + (HEIGHT - MARGINS.bottom) + ')')
+                .call(xAxis);
              
-            focus.append('g')
-              .attr('class', 'y axis')
-              .attr('transform', 'translate(' + (MARGINS.left) + ',0)')
-              .call(yAxis);
+            var yaxis_el = focus.append('g')
+                .attr('class', 'y axis')
+                .attr('transform', 'translate(' + (MARGINS.left) + ',0)')
+                .call(yAxis);
+
+            xaxis_el.append("text")
+                .attr("class", "x label")
+                .attr("text-anchor", "end")
+                .attr("x", WIDTH)
+                .attr("y", HEIGHT - 6)
+                .text("Date");
+
+            yaxis_el.append("text")
+                .attr("class", "y label")
+                .attr("text-anchor", "end")
+                .attr("y", 6)
+                .attr("dy", ".75em")
+                .attr("transform", "rotate(-90)")
+                .text(units);
 
 
 
@@ -609,15 +631,19 @@
               .interpolate('linear');
 
             focus.append('path')
-              .attr('d', lineFunc(graph_data))
-              .attr('stroke', 'rgb(31,119,180)')
-              .attr('class','area')
-              .attr('stroke-width', 1.5)
-              .attr('fill', 'none');
+                .attr('d', lineFunc(graph_data))
+                .attr('stroke', 'rgb(31,119,180)')
+                .attr('class','line')
+                .attr('stroke-width', 1.5)
+                .attr("clip-path", "url(#clip)")
+                .attr('fill', 'none');
+
+
 
             var context = svg.append("g")
                 .attr("class", "context")
                 .attr("transform", "translate(0," + HEIGHT + ")");
+
 
 
             context.append('g')
@@ -630,7 +656,7 @@
               .attr('d', lineFunc1(graph_data))
               .attr('stroke', 'rgb(31,119,180)')
               .attr('stroke-width', 1.5)
-               .attr('class','area')
+              .attr('class','line')
               .attr('fill', 'none');
 
             context.append("g")
@@ -641,7 +667,7 @@
               .attr("height", 35);
         function brushed() {
           xRange.domain(brush.empty() ? xRange2.domain() : brush.extent());
-          focus.select(".area").attr("d", lineFunc(graph_data));
+          focus.select(".line").attr("d", lineFunc(graph_data));
           focus.select(".x.axis").call(xAxis);
             }
         var summary = calcSummaryStats(graph_data);
@@ -804,7 +830,7 @@
                         for (var i=0; i<d.length; i++){
                                 d[i].x = d[i].x*1000;
                             }
-                        graphVals(d, vals, units);
+                        graphVals(d, units);
                         if (data['variable_name']){
                             var var_text = '<h2>' + data['variable_name'] + '</h2>';
                             $('#graph-header-var').html(var_text);}

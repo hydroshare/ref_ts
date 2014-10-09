@@ -562,14 +562,13 @@
                   .orient('left')
                   .tickSubdivide(true);
 
-            $("#graph-container").html("");
-
+            $("#graph-container").html("");   // Clear the graph for when date preferences are changed
 
             var svg = d3.select("#graph-container").append("svg")
                 .attr("width", 833)
                 .attr("height", 500);
 
-            svg.append("clipPath")
+            svg.append("clipPath")  //Making the graph cut off at the y axis while brushing
                 .attr("id", "clip")
               .append("rect")
                 .attr("width",  WIDTH-2*MARGINS.left-MARGINS.right)
@@ -585,31 +584,28 @@
                 .attr("width", 762)
                 .attr("height", 300);
              
-            var xaxis_el = focus.append('g')
+            svg.append('g')  // Add the x axis
                 .attr('class', 'x axis')
                 .attr('transform', 'translate(0,' + (HEIGHT - MARGINS.bottom) + ')')
                 .call(xAxis);
-             
-            var yaxis_el = focus.append('g')
-                .attr('class', 'y axis')
-                .attr('transform', 'translate(' + (MARGINS.left) + ',0)')
-                .call(yAxis);
 
-            xaxis_el.append("text")
-                .attr("class", "x label")
-                .attr("text-anchor", "end")
-                .attr("x", WIDTH)
-                .attr("y", HEIGHT - 6)
+            svg.append("text")  //x axis text label
+                .attr('transform', 'translate(' + (WIDTH/2) + ',' + (HEIGHT - MARGINS.bottom) + ')') //positioning
+                .attr("text-anchor", "middle")
                 .text("Date");
 
-            yaxis_el.append("text")
-                .attr("class", "y label")
-                .attr("text-anchor", "end")
-                .attr("y", 6)
-                .attr("dy", ".75em")
-                .attr("transform", "rotate(-90)")
-                .text(units);
+            svg.append('g')  // Add the y axis
+                .attr('class', 'y axis')
+                .attr('transform', 'translate(' + (MARGINS.left) + ',0)') // not totall sure this is necessary
+                .call(yAxis);
 
+            svg.append("text")  // y axis label
+                .attr("transform", "rotate(-90)")
+                .attr("y", 6)
+                .attr("x",0 - (HEIGHT / 2))
+                .attr("dy", ".75em")
+                .attr("text-anchor", "middle")
+                .text(units);
 
 
             var lineFunc = d3.svg.line()
@@ -643,13 +639,6 @@
             var context = svg.append("g")
                 .attr("class", "context")
                 .attr("transform", "translate(0," + HEIGHT + ")");
-
-
-
-            context.append('g')
-              .attr('class', 'x axis')
-              .attr('transform', 'translate(0,' + (HEIGHT2 - MARGINS.bottom) + ')')
-              .call(xAxis);
 
 
             context.append('path')

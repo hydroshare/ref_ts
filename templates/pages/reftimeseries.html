@@ -525,7 +525,7 @@
             return str.indexOf(suffix, str.length - suffix.length) !== -1;
         }
 
-        function graphVals(graph_data, units) {
+        function graphVals(graph_data, units, varName) {
 
 
             var minDate = new Date(graph_data[0].x);
@@ -562,13 +562,13 @@
                   .orient('left')
                   .tickSubdivide(true);
 
-            $("#graph-container").html("");   // Clear the graph for when date preferences are changed
+            $("#graph-container").html("");
 
             var svg = d3.select("#graph-container").append("svg")
                 .attr("width", 833)
                 .attr("height", 500);
 
-            svg.append("clipPath")  //Making the graph cut off at the y axis while brushing
+            svg.append("clipPath")
                 .attr("id", "clip")
               .append("rect")
                 .attr("width",  WIDTH-2*MARGINS.left-MARGINS.right)
@@ -584,15 +584,10 @@
                 .attr("width", 762)
                 .attr("height", 300);
              
-            svg.append('g')  // Add the x axis
+            focus.append('g')  // Add the x axis
                 .attr('class', 'x axis')
                 .attr('transform', 'translate(0,' + (HEIGHT - MARGINS.bottom) + ')')
                 .call(xAxis);
-
-            svg.append("text")  //x axis text label
-                .attr('transform', 'translate(' + (WIDTH/2) + ',' + (HEIGHT - MARGINS.bottom) + ')') //positioning
-                .attr("text-anchor", "middle")
-                .text("Date");
 
             svg.append('g')  // Add the y axis
                 .attr('class', 'y axis')
@@ -605,7 +600,7 @@
                 .attr("x",0 - (HEIGHT / 2))
                 .attr("dy", ".75em")
                 .attr("text-anchor", "middle")
-                .text(units);
+                .text(varName + " ("+units+")");
 
 
             var lineFunc = d3.svg.line()
@@ -639,6 +634,13 @@
             var context = svg.append("g")
                 .attr("class", "context")
                 .attr("transform", "translate(0," + HEIGHT + ")");
+
+
+
+            context.append('g')
+              .attr('class', 'x axis')
+              .attr('transform', 'translate(0,' + (HEIGHT2 - MARGINS.bottom) + ')')
+              .call(xAxis);
 
 
             context.append('path')
@@ -819,9 +821,13 @@
                         for (var i=0; i<d.length; i++){
                                 d[i].x = d[i].x*1000;
                             }
-                        graphVals(d, units);
+
+                        if(data['variable_name']){
+                            var varName = data['variable_name'];
+                        }
+                        graphVals(d, units, varName);
                         if (data['variable_name']){
-                            var var_text = '<h2>' + data['variable_name'] + '</h2>';
+                            var var_text = '<h2>' + varName + '</h2>';
                             $('#graph-header-var').html(var_text);}
                         if (data['site_name']){
                             var site_text = '<h3>&nbsp;&nbsp;&nbsp; at ' + data['site_name'] + '</h3>';
